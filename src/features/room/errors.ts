@@ -15,6 +15,11 @@ const MESSAGES: [pattern: RegExp, message: string][] = [
     "진행할 라운드가 더 없습니다. 투표 또는 게임 종료를 진행해 주세요.",
   ],
   [/no_timer/, "이 라운드에는 타이머가 없습니다."],
+  [/chat_disabled/, "대면형 방에서는 채팅을 사용하지 않습니다."],
+  [
+    /invalid_link/,
+    "음성 링크는 https:// 또는 http:// 로 시작하는 주소만 쓸 수 있습니다. (300자 이내)",
+  ],
   [/chat_blocked/, "GM이 대화를 잠시 멈췄습니다."],
   [/muted/, "GM이 이 방에서의 발언을 막았습니다."],
   [/chat_not_allowed/, "이번 라운드에서는 전체 대화를 할 수 없습니다."],

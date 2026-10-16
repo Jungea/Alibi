@@ -154,6 +154,26 @@ test("GM 1명과 참가자 3명이 한 판을 끝까지 진행한다", async ({ 
       "E2E-HIDDEN-MISSION",
     );
 
+  // 테이블 화면: GM 만 열 수 있고, 공개 정보만 보인다 (비밀·귓속말·개인 단서 없음)
+  const table = await gmContext.newPage();
+  await table.goto(
+    gm.url().replace(/\/room\/([0-9a-f-]+).*/, "/room/$1/table"),
+  );
+  await expect(table.getByText(code)).toBeVisible();
+  await expect(table.getByText(/E2E 오프닝/)).toBeVisible();
+  const tableText = await table.locator("body").innerText();
+  for (const secret of [...SECRETS, "E2E-WHISPER", "E2E-PRIVATE-BODY"])
+    expect(tableText, `테이블 화면의 ${secret}`).not.toContain(secret);
+  await table.close();
+
+  await a.page.goto(
+    a.page.url().replace(/\/room\/([0-9a-f-]+).*/, "/room/$1/table"),
+  );
+  await expect(
+    a.page.getByText("테이블 화면은 GM만 열 수 있습니다"),
+  ).toBeVisible();
+  await a.page.goBack();
+
   // 미획득 비밀 단서는 다른 참가자가 받은 응답에 없다 (A 가 개인 단서를 뽑았다면 B 는 받지 못해야 한다)
   const privateDrawnByA = a.received.join("\n").includes("E2E-PRIVATE-BODY");
   if (privateDrawnByA)

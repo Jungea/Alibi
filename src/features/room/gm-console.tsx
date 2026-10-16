@@ -12,6 +12,7 @@ import {
 } from "@/lib/game/room-state";
 
 import { MISSION_STATUS_LABELS } from "./missions-panel";
+import { PlayModePanel } from "./play-mode-panel";
 import type { RoomContext } from "./room-client";
 import { fetchEndingPreview, fetchGmGuide, fetchGmMissions } from "./state";
 import { useRemote } from "./use-remote";
@@ -172,6 +173,15 @@ export function GmConsole({ ctx }: { ctx: RoomContext }) {
       </div>
 
       <GmMissions ctx={ctx} />
+
+      <details className="rounded-lg border p-3">
+        <summary className="cursor-pointer text-sm font-medium">
+          진행 방식 · 테이블 화면 · QR
+        </summary>
+        <div className="mt-3">
+          <PlayModePanel ctx={ctx} />
+        </div>
+      </details>
 
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">참가자와 인물 (GM만 보임)</h3>

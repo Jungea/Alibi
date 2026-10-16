@@ -57,6 +57,11 @@ export function GameView({ ctx }: { ctx: RoomContext }) {
             라운드가 끝났습니다. GM이 다음 진행을 선택할 때까지 기다려 주세요.
           </p>
         )}
+        {room.playMode === "face" && (
+          <p className="text-muted-foreground text-xs">
+            대면형: 채팅 없이 모여서 대화하며 진행합니다.
+          </p>
+        )}
         {room.status === "ended" && (
           <p className="text-muted-foreground text-sm">
             게임이 종료되었습니다.
@@ -82,8 +87,22 @@ export function GameView({ ctx }: { ctx: RoomContext }) {
         </section>
       )}
 
+      {room.voiceLink && (
+        <section className="bg-card flex flex-wrap items-center gap-3 rounded-xl border p-4">
+          <h2 className="font-medium">음성 대화</h2>
+          <a
+            href={room.voiceLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary text-sm break-all underline"
+          >
+            {room.voiceLink}
+          </a>
+        </section>
+      )}
+
       <CluesPanel ctx={ctx} />
-      <ChatPanel ctx={ctx} />
+      {room.playMode === "chat" && <ChatPanel ctx={ctx} />}
       {overview.isGm && <GmGuide ctx={ctx} />}
 
       <section className="bg-card flex flex-col gap-2 rounded-xl border p-4">

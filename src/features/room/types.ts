@@ -20,6 +20,12 @@ export const overviewSchema = z.object({
     endingStep: z.number().int().min(0).max(3),
     chatBlocked: z.boolean().default(false),
     whisperNotice: z.boolean().default(false),
+    playMode: z.enum(["chat", "face"]).default("chat"),
+    // 화면에 링크로 쓰이므로 http/https 만 받는다 (DB 도 같은 규칙).
+    voiceLink: z
+      .string()
+      .regex(/^https?:\/\//)
+      .nullish(),
   }),
   scenario: z.object({
     title: z.string().nullable(),
@@ -219,3 +225,48 @@ export const endingResultSchema = z.object({
     .optional(),
 });
 export type EndingResult = z.infer<typeof endingResultSchema>;
+
+/** 테이블 화면용 공개 정보 (GM 만 받는다). 인물 배정·비밀·개인 힌트는 들어 있지 않다. */
+export const tableViewSchema = z.object({
+  serverNow: z.string(),
+  code: z.string(),
+  status: z.enum(ROOM_STATUSES),
+  playMode: z.enum(["chat", "face"]),
+  voiceLink: z
+    .string()
+    .regex(/^https?:\/\//)
+    .nullable(),
+  currentRoundIndex: z.number().int(),
+  timerEndsAt: z.string().nullable(),
+  timerPausedRemaining: z.number().int().nullable(),
+  endingStep: z.number().int().min(0).max(3),
+  maxPlayers: z.number().int(),
+  scenario: z.object({
+    title: z.string().nullable(),
+    genre: z.string().nullable(),
+    victim: z.string().nullish(),
+    incidentTime: z.string().nullish(),
+    incidentPlace: z.string().nullish(),
+    openingText: z.string().nullish(),
+  }),
+  players: z.array(z.object({ nickname: z.string(), ready: z.boolean() })),
+  characters: z.array(z.object({ name: z.string(), publicInfo: z.string() })),
+  rounds: z.array(
+    z.object({
+      name: z.string(),
+      goal: z.string(),
+      unlockContent: z.string().nullish(),
+    }),
+  ),
+  clues: z.array(
+    z.object({
+      id: z.uuid(),
+      title: z.string(),
+      body: z.string(),
+      kind: z.string(),
+      roundIndex: z.number().int(),
+    }),
+  ),
+  votes: z.object({ total: z.number().int(), voted: z.number().int() }),
+});
+export type TableView = z.infer<typeof tableViewSchema>;

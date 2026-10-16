@@ -15,6 +15,7 @@ import {
   myMissionSchema,
   overviewSchema,
   playerSchema,
+  tableViewSchema,
   voteStatusSchema,
   type CharacterCard,
   type EndingPreview,
@@ -26,6 +27,7 @@ import {
   type RoomMessage,
   type RoomOverview,
   type RoomPlayer,
+  type TableView,
   type VoteStatus,
 } from "./types";
 
@@ -87,6 +89,11 @@ type Commands = {
     p_channel?: "all" | "whisper" | "group";
     p_target?: string | null;
     p_group?: string | null;
+  };
+  set_room_mode: {
+    p_room: string;
+    p_mode: "chat" | "face";
+    p_voice_link: string | null;
   };
   set_chat_blocked: { p_room: string; p_blocked: boolean };
   set_whisper_notice: { p_room: string; p_on: boolean };
@@ -182,6 +189,14 @@ export const fetchGmGuide = (
 ): Promise<Fetched<ScenarioBundle>> =>
   rpcParsed(sb, "get_gm_guide", { p_room: room }, (d) =>
     bundleSchema.safeParse(d),
+  );
+
+export const fetchTableView = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<TableView>> =>
+  rpcParsed(sb, "get_table_view", { p_room: room }, (d) =>
+    tableViewSchema.safeParse(d),
   );
 
 export const fetchGroups = (

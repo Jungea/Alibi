@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 
+import { PlayModePanel } from "./play-mode-panel";
 import type { RoomContext } from "./room-client";
 
 export function Lobby({ ctx }: { ctx: RoomContext }) {
@@ -19,6 +20,19 @@ export function Lobby({ ctx }: { ctx: RoomContext }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {overview.room.voiceLink && (
+        <section className="bg-card flex flex-wrap items-center gap-3 rounded-xl border p-4">
+          <h2 className="font-medium">음성 대화</h2>
+          <a
+            href={overview.room.voiceLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary text-sm break-all underline"
+          >
+            {overview.room.voiceLink}
+          </a>
+        </section>
+      )}
       <section className="bg-card flex flex-col gap-3 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-medium">
@@ -169,6 +183,7 @@ export function Lobby({ ctx }: { ctx: RoomContext }) {
               강제 시작
             </Button>
           </div>
+          <PlayModePanel ctx={ctx} />
         </section>
       )}
 
