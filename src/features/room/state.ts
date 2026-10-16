@@ -1,11 +1,24 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { roomErrorMessage } from "./errors";
+import { bundleSchema, type ScenarioBundle } from "@/lib/schemas/scenario";
+
 import {
+  characterCardSchema,
+  clueSchema,
+  drawnClueSchema,
+  endingResultSchema,
+  messageSchema,
   overviewSchema,
   playerSchema,
+  voteStatusSchema,
+  type CharacterCard,
+  type EndingResult,
+  type RoomClue,
+  type RoomMessage,
   type RoomOverview,
   type RoomPlayer,
+  type VoteStatus,
 } from "./types";
 
 /** 서버·브라우저 어디서든 같은 방식으로 방 상태를 읽는다. 항상 호출자의 세션(RLS)으로 요청한다. */
@@ -58,7 +71,10 @@ type Commands = {
   start_round: { p_room: string };
   end_round: { p_room: string };
   start_vote: { p_room: string };
-  finish_game: { p_room: string };
+  finish_game: { p_room: string; p_ending_id?: string | null };
+  advance_ending: { p_room: string };
+  send_message: { p_room: string; p_body: string };
+  cast_vote: { p_room: string; p_target: string };
   set_timer_paused: { p_room: string; p_paused: boolean };
   extend_timer: { p_room: string; p_seconds: number };
 };
@@ -74,4 +90,95 @@ export async function runRoomCommand<K extends RoomCommandName>(
   return error
     ? { ok: false, error: roomErrorMessage(error.message) }
     : { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// 플레이 화면용 조회. 응답은 모두 Zod 로 한 번 더 검증한다.
+// ---------------------------------------------------------------------------
+export type Fetched<T> = { ok: true; data: T } | { ok: false; error: string };
+
+async function rpcParsed<T>(
+  supabase: SupabaseClient,
+  fn: string,
+  args: Record<string, unknown>,
+  parse: (data: unknown) => { success: true; data: T } | { success: false },
+): Promise<Fetched<T>> {
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) return { ok: false, error: roomErrorMessage(error.message) };
+  const parsed = parse(data);
+  return parsed.success
+    ? { ok: true, data: parsed.data }
+    : { ok: false, error: roomErrorMessage(null) };
+}
+
+export const fetchMyCharacter = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<CharacterCard | null>> =>
+  rpcParsed(sb, "get_my_character", { p_room: room }, (d) =>
+    characterCardSchema.safeParse(d),
+  );
+
+export const fetchClues = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<RoomClue[]>> =>
+  rpcParsed(sb, "get_my_clues", { p_room: room }, (d) =>
+    clueSchema.array().safeParse(d),
+  );
+
+export const fetchVoteStatus = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<VoteStatus>> =>
+  rpcParsed(sb, "get_vote_status", { p_room: room }, (d) =>
+    voteStatusSchema.safeParse(d),
+  );
+
+export const fetchEnding = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<EndingResult>> =>
+  rpcParsed(sb, "get_ending", { p_room: room }, (d) =>
+    endingResultSchema.safeParse(d),
+  );
+
+export const fetchGmGuide = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<ScenarioBundle>> =>
+  rpcParsed(sb, "get_gm_guide", { p_room: room }, (d) =>
+    bundleSchema.safeParse(d),
+  );
+
+export async function drawCard(
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<{ id: string; title: string; body: string; kind: string }>> {
+  return rpcParsed(sb, "draw_card", { p_room: room }, (d) =>
+    drawnClueSchema.safeParse(d),
+  );
+}
+
+export const CHAT_PAGE_SIZE = 50;
+
+/** 채팅 기록. beforeId 가 있으면 그 이전 메시지를, 없으면 가장 최근 메시지를 돌려준다 (오래된 것이 앞). */
+export async function fetchMessages(
+  sb: SupabaseClient,
+  room: string,
+  opts: { beforeId?: number; afterId?: number } = {},
+): Promise<Fetched<RoomMessage[]>> {
+  let q = sb
+    .from("room_messages")
+    .select("id, kind, character_id, body, created_at")
+    .eq("room_id", room);
+  if (opts.beforeId !== undefined) q = q.lt("id", opts.beforeId);
+  if (opts.afterId !== undefined) q = q.gt("id", opts.afterId);
+  const { data, error } = await q
+    .order("id", { ascending: false })
+    .limit(CHAT_PAGE_SIZE);
+  if (error) return { ok: false, error: roomErrorMessage(error.message) };
+  const parsed = messageSchema.array().safeParse(data ?? []);
+  if (!parsed.success) return { ok: false, error: roomErrorMessage(null) };
+  return { ok: true, data: parsed.data.reverse() };
 }

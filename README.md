@@ -27,6 +27,7 @@ npm run dev        # 개발 서버 (http://localhost:3000)
 | `npm run test:watch`   | 단위 테스트 감시 모드         |
 | `npm run format`       | Prettier로 코드 정리          |
 | `npm run format:check` | Prettier 검사만               |
+| `npm run test:e2e`     | Playwright E2E (아래 참고)    |
 
 ## 환경변수
 
@@ -40,6 +41,7 @@ cp .env.example .env.local
 | ------------------------------- | --------------------------------------------------------------------- |
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase 프로젝트 URL (R2~)                                           |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon(공개) 키 또는 publishable 키. 보안은 RLS가 담당합니다.           |
+| `NEXT_PUBLIC_SENTRY_DSN`        | (선택) Sentry 오류 수집. 비우면 아무것도 보내지 않습니다.             |
 | `NEXT_PUBLIC_SITE_URL`          | (선택) 이메일 확인 링크가 돌아올 주소. 비우면 요청 주소를 사용합니다. |
 
 `service_role` 키는 이 앱 코드에서 사용하지 않습니다. 환경변수가 없어도 홈과 도움도구(`/tools`)는 정상 동작하고, 시나리오 제작 화면에는 설정 안내가 표시됩니다.
@@ -69,15 +71,20 @@ cp .env.example .env.local
 - **내 시나리오:** 복제, 삭제, JSON 내보내기/가져오기(백업). 사용자당 시나리오는 최대 50개입니다.
 - **일러스트:** JPG·PNG·WebP만 허용하며 업로드 전에 브라우저에서 줄이고, 본인 폴더에만 저장됩니다. 복제·가져오기 시 본인 폴더의 이미지만 유지됩니다.
 
-## 게임방 (R3 진행 중: 방·입장·진행 로직)
+## 게임방 (R3)
 
 - **방 만들기:** `/builder`에서 발행된 시나리오의 "방 만들기"를 누르면 6자리 초대 코드가 발급되고, 만든 사람은 **GM 전용**으로 입장합니다(참가자로는 못 들어옵니다).
 - **입장:** `/join` 또는 `/join/<코드>`에서 코드와 닉네임을 입력합니다. 로그인은 필요 없고 Supabase 익명 로그인으로 들어옵니다. 틀린 코드를 10분 안에 10번 입력하면 잠시 막힙니다. 새로고침·재접속해도 같은 방으로 돌아옵니다.
 - **대기실:** 접속자 표시, 준비 완료, 최대 인원(시나리오 인물 수), GM의 랜덤 배정·직접 지정·내보내기.
 - **진행:** 대기실 → 인물 확인 → 라운드(반복) → 투표 → 종료. GM 콘솔에서 라운드 시작/종료, 타이머 일시정지·±시간, 투표 시작, 게임 종료. 타이머는 서버에 저장된 종료 시각으로 계산합니다.
-- **아직 없음 (R3-C·D):** 인물 상세 카드, 힌트 카드, 채팅, 투표 집계, 결말 공개.
+- **내 인물 카드:** 공개/비밀 정보, 개인 목표, 관계, 이미 시작한 라운드의 추가 정보. 서버가 본인 것만 돌려줍니다.
+- **힌트 카드:** 허용된 라운드에서 "카드 뽑기"(한 라운드에 한 사람 최대 3장). 획득 라운드가 지정된 카드는 그 라운드에서만 나옵니다. 개인 카드는 뽑은 사람만, 전체 공개 카드는 모두 봅니다. 뽑지 않은 카드는 누구에게도 내려가지 않습니다.
+- **채팅:** 전체 채팅(말한 사람은 인물 이름으로 표시, GM 화면에만 닉네임 병기), 시스템 메시지(라운드 시작·카드 획득 등), GM 공지. 최근 50개만 불러오고 위로 스크롤하면 이전 메시지를 더 불러옵니다. 5초에 5개까지(도배 방지), 라운드가 채팅을 허용할 때만 가능합니다.
+- **투표:** 1인 1표(DB 제약), 자기 자신 제외. 누가 누구에게 투표했는지는 결말 공개 전에는 아무에게도 보이지 않습니다.
+- **결말:** GM이 게임 종료 시 결말을 고르면, 투표 결과 → 진실 → 후일담 순서로 GM이 단계마다 공개합니다. 서버는 공개된 단계까지만 돌려줍니다.
+- **GM 진행 자료:** 범인·타임라인·인물별 비밀·전체 힌트(참/거짓)를 GM만 볼 수 있습니다.
 
-방 상태는 `rooms` / `room_players` / `room_assignments`에 있고, 모든 변경은 RPC로만 가능합니다. 누가 어떤 인물인지는 본인과 GM만 조회할 수 있고, 시나리오 원본(범인·진실)은 참가자에게 내려가지 않습니다. 권한 테스트는 `supabase/tests/rooms.test.ts`에 있습니다.
+방 상태는 `rooms` / `room_players` / `room_assignments`에 있고, 모든 변경은 RPC로만 가능합니다. 누가 어떤 인물인지는 본인과 GM만 조회할 수 있고, 시나리오 원본(범인·진실)은 참가자에게 내려가지 않습니다. 권한 테스트는 `supabase/tests/rooms.test.ts`(방·입장·진행)와 `supabase/tests/play.test.ts`(카드·채팅·투표·결말)에 있습니다.
 
 ### 보안 구조
 
@@ -91,6 +98,17 @@ cp .env.example .env.local
 - 스키마는 `supabase/migrations/`의 SQL 파일로만 관리합니다. 대시보드에서 직접 수정하지 않습니다.
 - `npm run test`는 Docker나 Supabase 없이 로컬 Postgres(PGlite)에 마이그레이션을 그대로 적용해 RLS 권한 테스트와 DB 계층 테스트를 실행합니다. (`supabase/tests/`)
 
+### E2E 테스트 (Playwright)
+
+`e2e/game.spec.ts`가 GM 1명 + 참가자 3명이 가입 → 시나리오 가져오기·발행 → 방 만들기 → 입장 → 배정 → 라운드 → 카드·채팅 → 투표 → 결말까지 진행하고, 참가자 브라우저가 받은 모든 응답(HTTP·웹소켓)에 타인의 비밀과 미공개 결말이 없는지 확인합니다.
+실제 개발용 Supabase 프로젝트가 필요하며(이메일 확인 끔, Anonymous Sign-Ins 켬), 처음 한 번 브라우저를 설치합니다.
+
+```bash
+npx playwright install chromium
+npm run test:e2e                         # 로컬 개발 서버를 띄워서 실행
+E2E_BASE_URL=https://<미리보기 주소> npm run test:e2e   # 배포된 주소 대상
+```
+
 ### Supabase 설정 (수동 설정을 마친 뒤)
 
 개발용과 실사용 프로젝트에 같은 마이그레이션을 적용합니다.
@@ -101,11 +119,13 @@ npx supabase link --project-ref <프로젝트 ref>  # DB 비밀번호 입력
 npx supabase db push                        # supabase/migrations 적용
 ```
 
-### R3 (방 입장·진행 단계)
+### R3 (게임방)
 
 - [ ] `npx supabase db push`로 새 마이그레이션(게임방) 적용 — 개발용 `alibi-dev`, 이후 실사용 `alibi-prod`
 - [ ] 대시보드 → Authentication → Sign In / Providers → **Anonymous Sign-Ins** 켜기 (참가자가 로그인 없이 입장하는 데 필요). 개발용·실사용 모두.
 - [ ] (선택) 대시보드 → Database → Replication(또는 Publications)에서 `supabase_realtime`에 `rooms`, `room_players`가 들어 있는지 확인. 마이그레이션이 자동으로 추가하며, 빠져 있어도 8~15초마다 새로고침되어 동작은 합니다.
+- [ ] (선택) 오류 수집: [sentry.io](https://sentry.io) 무료 플랜 가입 → 프로젝트(Next.js) 생성 → DSN 복사 → `.env.local`과 Vercel 환경변수에 `NEXT_PUBLIC_SENTRY_DSN` 입력. 비워 두면 꺼진 채로 동작합니다.
+- [ ] `npx playwright install chromium` 후 `npm run test:e2e`로 E2E 첫 실행
 - [ ] 두 기기(또는 시크릿 창)로 확인: 한쪽에서 방 만들기 → 다른 쪽에서 코드로 입장 → 준비/배정/시작
 
 ## 폴더 구조

@@ -1,5 +1,6 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Check, Copy } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,7 +19,11 @@ import {
 } from "./state";
 
 export interface RoomContext extends RoomState {
+  supabase: SupabaseClient;
+  roomId: string;
   userId: string;
+  /** 진행 단계가 바뀌거나 시스템 메시지가 오면 올라가는 값. 카드·힌트·투표·결말을 다시 읽는 기준이다. */
+  pulse: number;
   online: ReadonlySet<string>;
   /** 서버 시각 - 이 기기 시각 */
   serverOffsetMs: number;
@@ -49,7 +54,9 @@ export function RoomClient({
   const [error, setError] = useState<string | null>(null);
   const [removed, setRemoved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pulse, setPulse] = useState(0);
   const seq = useRef(0);
+  const signature = useRef("");
 
   const refresh = useCallback(async () => {
     const n = ++seq.current;
@@ -57,6 +64,12 @@ export function RoomClient({
     if (n !== seq.current) return; // 더 최근 요청이 있으면 오래된 응답은 버린다.
     if (result.ok) {
       setState({ overview: result.overview, players: result.players });
+      const { status, currentRoundIndex, endingStep } = result.overview.room;
+      const sig = `${status}:${currentRoundIndex}:${endingStep}`;
+      if (sig !== signature.current) {
+        signature.current = sig;
+        setPulse((p) => p + 1);
+      }
       setServerOffsetMs(
         computeServerOffset(result.overview.serverNow, Date.now()),
       );
@@ -91,6 +104,18 @@ export function RoomClient({
           filter: `room_id=eq.${roomId}`,
         },
         () => void refresh(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "room_messages",
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          setPulse((p) => p + 1); // 힌트 획득·전원 투표 같은 시스템 메시지 뒤에 목록을 다시 읽는다.
+        },
       )
       .on("presence", { event: "sync" }, () =>
         setOnline(new Set(Object.keys(channel.presenceState()))),
@@ -136,6 +161,7 @@ export function RoomClient({
       } as never);
       setBusy(false);
       if (!res.ok) setError(res.error);
+      setPulse((p) => p + 1);
       await refresh();
       return res.ok;
     },
@@ -165,7 +191,10 @@ export function RoomClient({
 
   const ctx: RoomContext = {
     ...state,
+    supabase,
+    roomId,
     userId,
+    pulse,
     online,
     serverOffsetMs,
     busy,

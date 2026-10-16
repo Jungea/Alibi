@@ -80,8 +80,10 @@ const snapshot = {
       unlockContent: "",
     },
   ],
-  clues: [{ id: "x", title: "SECRET-힌트" }],
-  endings: [{ id: "y", truthText: "SECRET-진실" }],
+  clues: [{ id: "e0000000-0000-4000-8000-000000000001", title: "SECRET-힌트" }],
+  endings: [
+    { id: "f0000000-0000-4000-8000-000000000001", truthText: "SECRET-진실" },
+  ],
 };
 
 let db: PGlite;
