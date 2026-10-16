@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
 /**
- * 모든 /builder 요청 전에 Supabase 세션 쿠키를 갱신하고, 로그인하지 않았으면 /login 으로 보낸다.
+ * /builder, /room, /join 요청 전에 Supabase 세션 쿠키를 갱신하고, /builder 는 로그인하지 않았으면 /login 으로 보낸다.
+ * (/room, /join 은 익명 로그인 사용자도 쓰므로 세션 갱신만 한다.)
  * 이것은 편의를 위한 1차 확인일 뿐이며, 실제 권한은 DB 의 RLS 와 서버 코드의 사용자 확인이 담당한다.
  */
 export async function proxy(request: NextRequest) {
@@ -49,5 +50,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/builder/:path*", "/login"],
+  matcher: ["/builder/:path*", "/login", "/room/:path*", "/join/:path*"],
 };

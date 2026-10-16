@@ -313,7 +313,10 @@ describe("발행", () => {
       [1, "private"],
     ]);
     const item = (await listScenarios(asA())).find((s) => s.id === id);
-    expect(item!.latestVersion).toEqual({ versionNo: 2, visibility: "public" });
+    expect(item!.latestVersion).toMatchObject({
+      versionNo: 2,
+      visibility: "public",
+    });
   });
 
   it("다른 사용자는 발행할 수도, 스냅샷을 읽을 수도 없다", async () => {

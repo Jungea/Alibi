@@ -13,9 +13,23 @@ export default function Home() {
           머더미스터리를 만들고, 진행하고, 함께 플레이하세요.
         </p>
       </div>
-      <Link href="/tools" className={buttonVariants({ size: "lg" })}>
-        도움도구 열기
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Link href="/join" className={buttonVariants({ size: "lg" })}>
+          방 입장
+        </Link>
+        <Link
+          href="/tools"
+          className={buttonVariants({ size: "lg", variant: "outline" })}
+        >
+          도움도구 열기
+        </Link>
+        <Link
+          href="/builder"
+          className={buttonVariants({ size: "lg", variant: "outline" })}
+        >
+          시나리오 제작
+        </Link>
+      </div>
     </main>
   );
 }

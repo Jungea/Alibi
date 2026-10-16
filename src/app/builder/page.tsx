@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Copy, Download, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, DoorOpen, Download, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/features/auth/session";
@@ -14,11 +14,14 @@ import { ConfirmSubmitButton } from "@/features/builder/confirm-submit-button";
 import { ImportButton } from "@/features/builder/import-button";
 import { listScenarios } from "@/features/builder/server/db";
 import { SetupNotice } from "@/features/builder/setup-notice";
+import { createRoomAction } from "@/features/room/actions";
+import { listActiveRooms } from "@/features/room/list";
+import { STATUS_LABELS } from "@/lib/game/room-state";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
 export const metadata: Metadata = { title: "내 시나리오 | 알리바이" };
 
-export default function BuilderPage() {
+export default function BuilderPage({ searchParams }: PageProps<"/builder">) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -40,9 +43,59 @@ export default function BuilderPage() {
       <Suspense
         fallback={<p className="text-muted-foreground text-sm">불러오는 중…</p>}
       >
+        <RoomNotice searchParams={searchParams} />
+        <ActiveRooms />
         <ScenarioList />
       </Suspense>
     </>
+  );
+}
+
+async function RoomNotice({
+  searchParams,
+}: {
+  searchParams: PageProps<"/builder">["searchParams"];
+}) {
+  const sp = await searchParams;
+  const message = typeof sp.roomError === "string" ? sp.roomError : null;
+  if (!message) return null;
+  return (
+    <p
+      role="alert"
+      className="text-destructive border-destructive/40 rounded-lg border p-3 text-sm"
+    >
+      {message.slice(0, 200)}
+    </p>
+  );
+}
+
+async function ActiveRooms() {
+  if (!getSupabaseEnv()) return null;
+  const { supabase, userId } = await requireUser();
+  const rooms = await listActiveRooms(supabase, userId);
+  if (rooms.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-medium">진행 중인 방</h2>
+      <ul className="flex flex-col gap-2">
+        {rooms.map((r) => (
+          <li key={r.id}>
+            <Link
+              href={`/room/${r.id}`}
+              className="bg-card hover:bg-muted/50 flex items-center justify-between gap-3 rounded-xl border p-3 text-sm"
+            >
+              <span className="font-mono text-base font-semibold tracking-widest">
+                {r.code}
+              </span>
+              <span className="text-muted-foreground">
+                {STATUS_LABELS[r.status]} ·{" "}
+                {new Date(r.created_at).toLocaleString("ko-KR")}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -101,6 +154,18 @@ async function ScenarioList() {
             >
               <Download /> 내보내기
             </Link>
+            {s.latestVersion && (
+              <form action={createRoomAction}>
+                <input
+                  type="hidden"
+                  name="versionId"
+                  value={s.latestVersion.id}
+                />
+                <Button type="submit" size="sm" variant="secondary">
+                  <DoorOpen /> 방 만들기
+                </Button>
+              </form>
+            )}
             <form action={duplicateAction}>
               <input type="hidden" name="id" value={s.id} />
               <Button type="submit" size="sm" variant="outline">

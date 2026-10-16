@@ -234,7 +234,11 @@ export interface ScenarioListItem {
   minPlayers: number;
   maxPlayers: number;
   updatedAt: string;
-  latestVersion: { versionNo: number; visibility: Visibility } | null;
+  latestVersion: {
+    id: string;
+    versionNo: number;
+    visibility: Visibility;
+  } | null;
 }
 
 export async function listScenarios(sb: Sb): Promise<ScenarioListItem[]> {
@@ -245,7 +249,7 @@ export async function listScenarios(sb: Sb): Promise<ScenarioListItem[]> {
       .order("updated_at", { ascending: false }),
     sb
       .from("scenario_versions")
-      .select("scenario_id, version_no, visibility")
+      .select("id, scenario_id, version_no, visibility")
       .order("version_no", { ascending: false }),
   ]);
   if (scenarios.error) fail("목록을 불러오지 못했습니다.", scenarios.error);
@@ -253,11 +257,12 @@ export async function listScenarios(sb: Sb): Promise<ScenarioListItem[]> {
 
   const latest = new Map<
     string,
-    { versionNo: number; visibility: Visibility }
+    { id: string; versionNo: number; visibility: Visibility }
   >();
   for (const v of versions.data ?? []) {
     if (!latest.has(v.scenario_id)) {
       latest.set(v.scenario_id, {
+        id: v.id,
         versionNo: v.version_no,
         visibility: v.visibility as Visibility,
       });
