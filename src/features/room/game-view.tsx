@@ -13,6 +13,7 @@ import { CharacterCardPanel } from "./character-card";
 import { CluesPanel } from "./clues-panel";
 import { EndingPanel } from "./ending-panel";
 import { GmConsole, GmGuide } from "./gm-console";
+import { MissionsPanel } from "./missions-panel";
 import type { RoomContext } from "./room-client";
 import { VotePanel } from "./vote-panel";
 
@@ -67,6 +68,7 @@ export function GameView({ ctx }: { ctx: RoomContext }) {
       {room.status === "ended" && <EndingPanel ctx={ctx} />}
       {room.status === "voting" && <VotePanel ctx={ctx} />}
       {!overview.isGm && <CharacterCardPanel ctx={ctx} />}
+      {!overview.isGm && <MissionsPanel ctx={ctx} />}
 
       {unlocked.length > 0 && (
         <section className="bg-card flex flex-col gap-3 rounded-xl border p-4">

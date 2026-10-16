@@ -126,6 +126,34 @@ test("GM 1명과 참가자 3명이 한 판을 끝까지 진행한다", async ({ 
   // 참가자 화면의 채팅에는 닉네임이 아니라 인물 이름이 보인다
   await expect(b.page.getByText("(탐정A)")).toHaveCount(0);
 
+  // 귓속말: 받는 사람과 GM 만 보고, 나머지 한 명은 어떤 응답으로도 받지 못한다
+  const c = players[2];
+  await a.page.getByRole("tab", { name: "귓속말" }).click();
+  await a.page.getByLabel("귓속말 상대").selectOption({ index: 1 });
+  await a.page.getByLabel("채팅 메시지").fill("E2E-WHISPER 비밀 이야기");
+  await a.page.getByRole("button", { name: "보내기" }).click();
+  await expect(gm.getByText("E2E-WHISPER 비밀 이야기")).toBeVisible();
+  const heardWhisper = () =>
+    [b, c].filter((p) =>
+      p.received.join("\n").includes("E2E-WHISPER 비밀 이야기"),
+    ).length;
+  await expect.poll(heardWhisper, { timeout: 20_000 }).toBe(1);
+  await a.page.waitForTimeout(3_000);
+  expect(heardWhisper(), "귓속말을 받은 참가자 수").toBe(1);
+
+  // 미션: 자가 보고 → GM 승인. 숨김 미션은 참가자에게 내려오지 않는다.
+  await a.page.getByRole("button", { name: "달성했어요" }).click();
+  await expect(a.page.getByText("GM 확인 대기")).toBeVisible();
+  await expect(gm.getByText(/확인 대기 1/)).toBeVisible({ timeout: 20_000 });
+  await gm.getByRole("button", { name: "승인(달성)" }).first().click();
+  await expect(a.page.getByText("달성", { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  for (const p of players)
+    expect(p.received.join("\n"), `${p.nickname}: 숨김 미션`).not.toContain(
+      "E2E-HIDDEN-MISSION",
+    );
+
   // 미획득 비밀 단서는 다른 참가자가 받은 응답에 없다 (A 가 개인 단서를 뽑았다면 B 는 받지 못해야 한다)
   const privateDrawnByA = a.received.join("\n").includes("E2E-PRIVATE-BODY");
   if (privateDrawnByA)
@@ -161,8 +189,11 @@ test("GM 1명과 참가자 3명이 한 판을 끝까지 진행한다", async ({ 
   }
 
   await gm.getByRole("button", { name: "진실 공개" }).click();
-  for (const p of players)
+  for (const p of players) {
     await expect(p.page.getByText(/E2E-TRUTH/)).toBeVisible();
+    // 숨김 미션은 이때 미션 달성표로 공개된다
+    await expect(p.page.getByText("E2E-HIDDEN-MISSION")).toBeVisible();
+  }
   await gm.getByRole("button", { name: "후일담 공개" }).click();
   for (const p of players)
     await expect(p.page.getByText("E2E 후일담 집사")).toBeVisible();

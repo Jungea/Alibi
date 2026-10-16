@@ -438,7 +438,17 @@ describe("채팅", () => {
       "select column_name from information_schema.columns where table_name = 'room_messages'",
     );
     expect(cols.rows.map((c) => c.column_name).sort()).toEqual(
-      ["body", "character_id", "created_at", "id", "kind", "room_id"].sort(),
+      [
+        "body",
+        "channel",
+        "character_id",
+        "created_at",
+        "group_id",
+        "id",
+        "kind",
+        "room_id",
+        "target_character_id",
+      ].sort(),
     );
   });
 

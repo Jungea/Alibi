@@ -18,6 +18,8 @@ export const overviewSchema = z.object({
     timerEndsAt: z.string().nullable(),
     timerPausedRemaining: z.number().int().nullable(),
     endingStep: z.number().int().min(0).max(3),
+    chatBlocked: z.boolean().default(false),
+    whisperNotice: z.boolean().default(false),
   }),
   scenario: z.object({
     title: z.string().nullable(),
@@ -52,6 +54,8 @@ export const overviewSchema = z.object({
   assignments: z
     .array(z.object({ userId: z.uuid(), characterId: z.uuid() }))
     .optional(),
+  /** GM 에게만: 승인을 기다리는 미션 보고 수 */
+  missionReports: z.number().int().optional(),
   /** 게임이 시작된 뒤 참가자 본인에게만 */
   myCharacterId: z.uuid().nullish(),
 });
@@ -61,6 +65,7 @@ export const playerSchema = z.object({
   user_id: z.uuid(),
   nickname: z.string(),
   ready: z.boolean(),
+  muted: z.boolean(),
 });
 export type RoomPlayer = z.infer<typeof playerSchema>;
 
@@ -122,11 +127,52 @@ export const drawnClueSchema = z.object({
 export const messageSchema = z.object({
   id: z.number(),
   kind: z.enum(["chat", "system", "gm"]),
+  channel: z.enum(["all", "whisper", "group"]),
   character_id: z.uuid().nullable(),
+  /** 귓속말일 때 받는 인물 */
+  target_character_id: z.uuid().nullable(),
+  group_id: z.uuid().nullable(),
   body: z.string(),
   created_at: z.string(),
 });
 export type RoomMessage = z.infer<typeof messageSchema>;
+
+export const groupSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  isSecret: z.boolean(),
+  isMember: z.boolean(),
+  isOwner: z.boolean(),
+  /** 멤버 인물 ID */
+  members: z.array(z.uuid()),
+});
+export type RoomGroup = z.infer<typeof groupSchema>;
+
+export const MISSION_STATUSES = ["open", "reported", "done", "failed"] as const;
+export type MissionStatus = (typeof MISSION_STATUSES)[number];
+
+export const myMissionSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string(),
+  scope: z.enum(["personal", "common"]),
+  judgeType: z.enum(["auto", "self_report", "gm"]),
+  status: z.enum(MISSION_STATUSES),
+});
+export type MyMission = z.infer<typeof myMissionSchema>;
+
+export const gmMissionSchema = myMissionSchema.extend({
+  hidden: z.boolean(),
+  characterName: z.string().nullable(),
+});
+export type GmMission = z.infer<typeof gmMissionSchema>;
+
+export const endingPreviewSchema = z.object({
+  endingId: z.uuid().nullable(),
+  endingName: z.string().nullable(),
+  culpritCaught: z.boolean(),
+});
+export type EndingPreview = z.infer<typeof endingPreviewSchema>;
 
 export const voteStatusSchema = z.object({
   total: z.number().int(),
@@ -149,6 +195,17 @@ export const endingResultSchema = z.object({
     )
     .optional(),
   culprits: z.array(z.string()).optional(),
+  culpritCaught: z.boolean().optional(),
+  missions: z
+    .array(
+      z.object({
+        title: z.string(),
+        scope: z.enum(["personal", "common"]),
+        character: z.string().nullable(),
+        status: z.enum(MISSION_STATUSES),
+      }),
+    )
+    .optional(),
   ending: z
     .object({
       name: z.string(),

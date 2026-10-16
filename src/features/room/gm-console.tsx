@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { LABELS } from "@/lib/schemas/scenario";
@@ -11,8 +11,9 @@ import {
   type RoomEvent,
 } from "@/lib/game/room-state";
 
+import { MISSION_STATUS_LABELS } from "./missions-panel";
 import type { RoomContext } from "./room-client";
-import { fetchGmGuide } from "./state";
+import { fetchEndingPreview, fetchGmGuide, fetchGmMissions } from "./state";
 import { useRemote } from "./use-remote";
 
 const EVENT_LABELS: Record<RoomEvent, string> = {
@@ -27,7 +28,7 @@ export function GmConsole({ ctx }: { ctx: RoomContext }) {
   const { overview, players, busy, run } = ctx;
   const { room, rounds, characters } = overview;
   const endings = overview.endings ?? [];
-  const [endingId, setEndingId] = useState("");
+  const [endingId, setEndingId] = useState(""); // "" = 자동 판정
   const next = rounds[room.currentRoundIndex + 1];
   const events = availableEvents({
     status: room.status,
@@ -35,6 +36,13 @@ export function GmConsole({ ctx }: { ctx: RoomContext }) {
     roundCount: rounds.length,
     nextRoundAllowsVote: next?.allowedActions.includes("vote"),
   }).filter((e) => e !== "start_game");
+
+  const canFinish = events.includes("finish_game");
+  const { data: preview } = useRemote(
+    () => fetchEndingPreview(ctx.supabase, ctx.roomId),
+    ctx.pulse,
+    canFinish,
+  );
 
   const nameOf = (id: string) =>
     characters.find((c) => c.id === id)?.name || "이름 없음";
@@ -82,21 +90,31 @@ export function GmConsole({ ctx }: { ctx: RoomContext }) {
               : EVENT_LABELS[e]}
           </Button>
         ))}
-        {events.includes("finish_game") && endings.length > 1 && (
+        {canFinish && endings.length > 0 && (
           <select
             aria-label="공개할 결말"
             className="bg-background rounded-md border px-2 py-2 text-sm"
-            value={endingId || endings[0].id}
+            value={endingId}
             onChange={(e) => setEndingId(e.target.value)}
           >
+            <option value="">
+              자동 판정{preview?.endingName ? `: ${preview.endingName}` : ""}
+            </option>
             {endings.map((e) => (
               <option key={e.id} value={e.id}>
-                결말: {e.name || "이름 없음"}
+                직접 선택: {e.name || "이름 없음"}
               </option>
             ))}
           </select>
         )}
       </div>
+      {canFinish && preview && (
+        <p className="text-muted-foreground text-xs">
+          투표 결과로는 범인을{" "}
+          {preview.culpritCaught ? "잡았습니다" : "놓쳤습니다"}. 자동 판정은
+          결말 순서대로 조건을 확인해 처음 맞는 결말을 고릅니다.
+        </p>
+      )}
 
       {hasTimerPhase(room.status) && (
         <div className="flex flex-wrap items-center gap-2">
@@ -128,6 +146,33 @@ export function GmConsole({ ctx }: { ctx: RoomContext }) {
         </div>
       )}
 
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-muted-foreground text-sm">대화</span>
+        <Button
+          size="sm"
+          variant={room.chatBlocked ? "default" : "outline"}
+          disabled={busy || room.status === "lobby"}
+          onClick={() =>
+            void run("set_chat_blocked", { p_blocked: !room.chatBlocked })
+          }
+        >
+          {room.chatBlocked ? "대화 다시 열기" : "대화 멈추기"}
+        </Button>
+        <label className="flex items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={room.whisperNotice}
+            disabled={busy}
+            onChange={(e) =>
+              void run("set_whisper_notice", { p_on: e.target.checked })
+            }
+          />
+          &ldquo;누군가 귓속말 중&rdquo; 알림
+        </label>
+      </div>
+
+      <GmMissions ctx={ctx} />
+
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">참가자와 인물 (GM만 보임)</h3>
         <ul className="flex flex-col gap-1 text-sm">
@@ -145,12 +190,110 @@ export function GmConsole({ ctx }: { ctx: RoomContext }) {
                 <span className="text-muted-foreground">
                   → {a ? nameOf(a.characterId) : "미배정"}
                 </span>
+                <Button
+                  size="sm"
+                  variant={p.muted ? "default" : "ghost"}
+                  className="ml-auto"
+                  disabled={busy}
+                  onClick={() =>
+                    void run("set_muted", {
+                      p_user: p.user_id,
+                      p_muted: !p.muted,
+                    })
+                  }
+                >
+                  {p.muted ? "발언 허용" : "발언 막기"}
+                </Button>
               </li>
             );
           })}
         </ul>
       </div>
     </section>
+  );
+}
+
+/** 미션 현황: 자가 보고 승인·반려, GM 판정, 숨김 미션까지 GM 이 결과를 정한다. */
+function GmMissions({ ctx }: { ctx: RoomContext }) {
+  const { busy, run, overview } = ctx;
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 10_000);
+    return () => clearInterval(id);
+  }, []);
+  const { data: missions } = useRemote(
+    () => fetchGmMissions(ctx.supabase, ctx.roomId),
+    `${ctx.pulse}:${tick}`,
+  );
+  if (!missions || missions.length === 0) return null;
+
+  const set = (id: string, status: "open" | "done" | "failed") =>
+    void run("set_mission_status", { p_mission: id, p_status: status });
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium">
+        미션 현황
+        {!!overview.missionReports && (
+          <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">
+            확인 대기 {overview.missionReports}
+          </span>
+        )}
+      </h3>
+      <ul className="flex flex-col gap-2 text-sm">
+        {missions.map((m) => (
+          <li
+            key={m.id}
+            className="flex flex-col gap-1 rounded-lg border p-2.5"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{m.title || "이름 없음"}</span>
+              <span className="text-muted-foreground text-xs">
+                {m.scope === "common" ? "공통" : (m.characterName ?? "개인")}
+                {m.hidden ? " · 숨김" : ""}
+                {m.judgeType === "self_report" ? " · 자가 보고" : " · GM 판정"}
+              </span>
+              <span className="bg-muted ml-auto rounded-full px-2.5 py-0.5 text-xs">
+                {MISSION_STATUS_LABELS[m.status]}
+              </span>
+            </div>
+            {m.description && (
+              <p className="text-muted-foreground text-xs whitespace-pre-wrap">
+                {m.description}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                size="sm"
+                variant={m.status === "reported" ? "default" : "outline"}
+                disabled={busy || m.status === "done"}
+                onClick={() => set(m.id, "done")}
+              >
+                {m.status === "reported" ? "승인(달성)" : "달성"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy || m.status === "failed"}
+                onClick={() => set(m.id, "failed")}
+              >
+                {m.status === "reported" ? "반려(실패)" : "실패"}
+              </Button>
+              {m.status !== "open" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => set(m.id, "open")}
+                >
+                  되돌리기
+                </Button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

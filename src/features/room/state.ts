@@ -7,14 +7,22 @@ import {
   characterCardSchema,
   clueSchema,
   drawnClueSchema,
+  endingPreviewSchema,
   endingResultSchema,
+  gmMissionSchema,
+  groupSchema,
   messageSchema,
+  myMissionSchema,
   overviewSchema,
   playerSchema,
   voteStatusSchema,
   type CharacterCard,
+  type EndingPreview,
   type EndingResult,
+  type GmMission,
+  type MyMission,
   type RoomClue,
+  type RoomGroup,
   type RoomMessage,
   type RoomOverview,
   type RoomPlayer,
@@ -35,7 +43,7 @@ export async function fetchRoomState(
     supabase.rpc("get_room_overview", { p_room: roomId }),
     supabase
       .from("room_players")
-      .select("user_id, nickname, ready")
+      .select("user_id, nickname, ready, muted")
       .eq("room_id", roomId)
       .order("joined_at", { ascending: true }),
   ]);
@@ -73,7 +81,32 @@ type Commands = {
   start_vote: { p_room: string };
   finish_game: { p_room: string; p_ending_id?: string | null };
   advance_ending: { p_room: string };
-  send_message: { p_room: string; p_body: string };
+  send_message: {
+    p_room: string;
+    p_body: string;
+    p_channel?: "all" | "whisper" | "group";
+    p_target?: string | null;
+    p_group?: string | null;
+  };
+  set_chat_blocked: { p_room: string; p_blocked: boolean };
+  set_whisper_notice: { p_room: string; p_on: boolean };
+  set_muted: { p_room: string; p_user: string; p_muted: boolean };
+  create_group: {
+    p_room: string;
+    p_name: string;
+    p_secret: boolean;
+    p_characters: string[];
+  };
+  join_group: { p_group: string };
+  leave_group: { p_group: string };
+  add_group_member: { p_group: string; p_character: string };
+  remove_group_member: { p_group: string; p_character: string };
+  report_mission: { p_room: string; p_mission: string };
+  set_mission_status: {
+    p_room: string;
+    p_mission: string;
+    p_status: "open" | "done" | "failed";
+  };
   cast_vote: { p_room: string; p_target: string };
   set_timer_paused: { p_room: string; p_paused: boolean };
   extend_timer: { p_room: string; p_seconds: number };
@@ -151,6 +184,38 @@ export const fetchGmGuide = (
     bundleSchema.safeParse(d),
   );
 
+export const fetchGroups = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<RoomGroup[]>> =>
+  rpcParsed(sb, "get_groups", { p_room: room }, (d) =>
+    groupSchema.array().safeParse(d),
+  );
+
+export const fetchMyMissions = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<MyMission[]>> =>
+  rpcParsed(sb, "get_my_missions", { p_room: room }, (d) =>
+    myMissionSchema.array().safeParse(d),
+  );
+
+export const fetchGmMissions = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<GmMission[]>> =>
+  rpcParsed(sb, "get_gm_missions", { p_room: room }, (d) =>
+    gmMissionSchema.array().safeParse(d),
+  );
+
+export const fetchEndingPreview = (
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<EndingPreview>> =>
+  rpcParsed(sb, "preview_ending", { p_room: room }, (d) =>
+    endingPreviewSchema.safeParse(d),
+  );
+
 export async function drawCard(
   sb: SupabaseClient,
   room: string,
@@ -170,7 +235,9 @@ export async function fetchMessages(
 ): Promise<Fetched<RoomMessage[]>> {
   let q = sb
     .from("room_messages")
-    .select("id, kind, character_id, body, created_at")
+    .select(
+      "id, kind, channel, character_id, target_character_id, group_id, body, created_at",
+    )
     .eq("room_id", room);
   if (opts.beforeId !== undefined) q = q.lt("id", opts.beforeId);
   if (opts.afterId !== undefined) q = q.gt("id", opts.afterId);

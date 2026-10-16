@@ -59,7 +59,7 @@ export const LABELS = {
   },
   allowedAction: {
     chat: "전체 대화",
-    whisper: "귓속말",
+    whisper: "귓속말·그룹 대화",
     draw_card: "카드 뽑기",
     vote: "투표",
   },

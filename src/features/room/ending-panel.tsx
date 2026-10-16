@@ -85,6 +85,12 @@ export function EndingPanel({ ctx }: { ctx: RoomContext }) {
               <span className="font-semibold">
                 {ending.culprits.join(", ") || "알 수 없음"}
               </span>
+              {ending.culpritCaught !== undefined && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {ending.culpritCaught ? "검거됨" : "놓침"}
+                </span>
+              )}
             </p>
           )}
           {ending.ending && (
@@ -102,6 +108,34 @@ export function EndingPanel({ ctx }: { ctx: RoomContext }) {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {ending?.missions && ending.missions.length > 0 && (
+        <div className="flex flex-col gap-2 border-t pt-4">
+          <h3 className="text-sm font-medium">미션 달성표</h3>
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {ending.missions.map((m, i) => (
+              <li key={`${m.title}-${i}`} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate">
+                  {m.title || "이름 없음"}
+                  <span className="text-muted-foreground text-xs">
+                    {" "}
+                    · {m.scope === "common" ? "공통" : (m.character ?? "개인")}
+                  </span>
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs ${
+                    m.status === "done"
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {m.status === "done" ? "달성" : "미달성"}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

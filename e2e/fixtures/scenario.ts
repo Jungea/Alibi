@@ -3,6 +3,7 @@ import {
   createClue,
   createEmptyBundle,
   createEnding,
+  createMission,
   createTimelineEntry,
 } from "../../src/features/builder/bundle";
 import type { ScenarioBundle } from "../../src/lib/schemas/scenario";
@@ -69,6 +70,29 @@ export function buildE2eScenario(): ScenarioBundle {
     visibility: "acquirer",
   });
   b.clues = [clue1, clue2];
+
+  // 탐색 라운드에서는 귓속말·그룹도 허용한다.
+  const explore = b.rounds.find((r) => r.name === "탐색");
+  if (explore && !explore.allowedActions.includes("whisper"))
+    explore.allowedActions.push("whisper");
+
+  const common = createMission();
+  Object.assign(common, {
+    title: "E2E 공통 미션",
+    description: "모두가 함께 달성하는 미션",
+    scope: "common",
+    judgeType: "self_report",
+  });
+  const hidden = createMission();
+  Object.assign(hidden, {
+    title: "E2E-HIDDEN-MISSION",
+    description: "GM만 아는 미션",
+    scope: "personal",
+    characterId: maid.id,
+    judgeType: "gm",
+    hidden: true,
+  });
+  b.missions = [common, hidden];
 
   const ending = createEnding();
   Object.assign(ending, {
