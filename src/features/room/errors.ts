@@ -15,6 +15,7 @@ const MESSAGES: [pattern: RegExp, message: string][] = [
     "진행할 라운드가 더 없습니다. 투표 또는 게임 종료를 진행해 주세요.",
   ],
   [/no_timer/, "이 라운드에는 타이머가 없습니다."],
+  [/invalid_notes/, "노트가 너무 크거나 형식이 맞지 않아 저장하지 못했습니다."],
   [/chat_disabled/, "대면형 방에서는 채팅을 사용하지 않습니다."],
   [
     /invalid_link/,

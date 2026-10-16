@@ -238,7 +238,13 @@ export function RoomClient({
         </p>
       )}
 
-      {status === "lobby" ? <Lobby ctx={ctx} /> : <GameView ctx={ctx} />}
+      {status === "lobby" ? (
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+          <Lobby ctx={ctx} />
+        </div>
+      ) : (
+        <GameView ctx={ctx} />
+      )}
     </div>
   );
 }

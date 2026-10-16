@@ -154,6 +154,29 @@ test("GM 1명과 참가자 3명이 한 판을 끝까지 진행한다", async ({ 
       "E2E-HIDDEN-MISSION",
     );
 
+  // 추리노트: 본인만 볼 수 있고, 새로고침해도 남는다
+  await a.page
+    .getByRole("button", { name: "노트" })
+    .click()
+    .catch(() => {});
+  await a.page.getByRole("tab", { name: "메모" }).click();
+  await a.page.getByLabel("자유 메모").fill("E2E-NOTE-SECRET 범인은 정원사");
+  await expect(a.page.getByText("저장됨")).toBeVisible({ timeout: 10_000 });
+  await a.page.reload();
+  await a.page
+    .getByRole("button", { name: "노트" })
+    .click()
+    .catch(() => {});
+  await a.page.getByRole("tab", { name: "메모" }).click();
+  await expect(a.page.getByLabel("자유 메모")).toHaveValue(
+    "E2E-NOTE-SECRET 범인은 정원사",
+  );
+  for (const other of [b, c])
+    expect(
+      other.received.join("\n"),
+      `${other.nickname}: 남의 노트`,
+    ).not.toContain("E2E-NOTE-SECRET");
+
   // 테이블 화면: GM 만 열 수 있고, 공개 정보만 보인다 (비밀·귓속말·개인 단서 없음)
   const table = await gmContext.newPage();
   await table.goto(

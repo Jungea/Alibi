@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { GroupManager } from "./groups-panel";
+import { TagButtons } from "./notes-panel";
 import type { RoomContext } from "./room-client";
 import {
   CHAT_PAGE_SIZE,
@@ -19,6 +20,7 @@ import {
   fetchMessages,
   runRoomCommand,
 } from "./state";
+import type { NotesApi } from "./use-notes";
 import { useRemote } from "./use-remote";
 import { messageSchema, type RoomMessage } from "./types";
 
@@ -42,7 +44,13 @@ function merge(prev: RoomMessage[], incoming: RoomMessage[]): RoomMessage[] {
  * 채팅 (전체 / 귓속말 / 그룹). 말한 사람은 닉네임이 아니라 인물 이름으로 표시한다 (GM 화면에만 닉네임을 덧붙임).
  * 처음에는 최근 메시지만 불러오고, 위로 스크롤하면 이전 메시지를 더 불러온다.
  */
-export function ChatPanel({ ctx }: { ctx: RoomContext }) {
+export function ChatPanel({
+  ctx,
+  notes,
+}: {
+  ctx: RoomContext;
+  notes?: NotesApi;
+}) {
   const { supabase, roomId, overview, players } = ctx;
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -305,6 +313,13 @@ export function ChatPanel({ ctx }: { ctx: RoomContext }) {
               <p className="text-sm break-words whitespace-pre-wrap">
                 {m.body}
               </p>
+              {notes && m.kind === "chat" && (
+                <TagButtons
+                  notes={notes}
+                  tagKey={`msg:${m.id}`}
+                  label={`${nameOfCharacter(m.character_id)}: ${m.body}`}
+                />
+              )}
             </div>
           ),
         )}

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { roomErrorMessage } from "./errors";
+import { parseNotes, type Notes } from "@/lib/game/notes";
 import { bundleSchema, type ScenarioBundle } from "@/lib/schemas/scenario";
 
 import {
@@ -198,6 +199,30 @@ export const fetchTableView = (
   rpcParsed(sb, "get_table_view", { p_room: room }, (d) =>
     tableViewSchema.safeParse(d),
   );
+
+/** 내 추리노트. 서버에는 본인 것만 있고, 없거나 깨져 있으면 빈 노트로 시작한다. */
+export async function fetchMyNotes(
+  sb: SupabaseClient,
+  room: string,
+): Promise<Fetched<Notes>> {
+  const { data, error } = await sb.rpc("get_my_notes", { p_room: room });
+  if (error) return { ok: false, error: roomErrorMessage(error.message) };
+  return { ok: true, data: parseNotes(data) };
+}
+
+export async function saveMyNotes(
+  sb: SupabaseClient,
+  room: string,
+  notes: Notes,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await sb.rpc("save_my_notes", {
+    p_room: room,
+    p_data: notes,
+  });
+  return error
+    ? { ok: false, error: roomErrorMessage(error.message) }
+    : { ok: true };
+}
 
 export const fetchGroups = (
   sb: SupabaseClient,

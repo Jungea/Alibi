@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { useNow } from "@/lib/use-now";
 import {
   formatRemaining,
@@ -14,11 +16,22 @@ import { CluesPanel } from "./clues-panel";
 import { EndingPanel } from "./ending-panel";
 import { GmConsole, GmGuide } from "./gm-console";
 import { MissionsPanel } from "./missions-panel";
+import { NotesPanel } from "./notes-panel";
 import type { RoomContext } from "./room-client";
+import { useNotes } from "./use-notes";
 import { VotePanel } from "./vote-panel";
+
+type Tab = "common" | "mine" | "notes";
+const TABS: [Tab, string][] = [
+  ["common", "공통"],
+  ["mine", "내 정보"],
+  ["notes", "노트"],
+];
 
 export function GameView({ ctx }: { ctx: RoomContext }) {
   const { overview } = ctx;
+  const [tab, setTab] = useState<Tab>("common");
+  const notes = useNotes(ctx, !overview.isGm);
   const { room, scenario, rounds } = overview;
   const round =
     room.currentRoundIndex >= 0 ? rounds[room.currentRoundIndex] : undefined;
@@ -72,52 +85,97 @@ export function GameView({ ctx }: { ctx: RoomContext }) {
       {overview.isGm && <GmConsole ctx={ctx} />}
       {room.status === "ended" && <EndingPanel ctx={ctx} />}
       {room.status === "voting" && <VotePanel ctx={ctx} />}
-      {!overview.isGm && <CharacterCardPanel ctx={ctx} />}
-      {!overview.isGm && <MissionsPanel ctx={ctx} />}
 
-      {unlocked.length > 0 && (
-        <section className="bg-card flex flex-col gap-3 rounded-xl border p-4">
-          <h2 className="font-medium">공개된 정보</h2>
-          {unlocked.map((r) => (
-            <div key={r.id} className="flex flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">{r.name}</span>
-              <p className="text-sm whitespace-pre-wrap">{r.unlockContent}</p>
-            </div>
+      {!overview.isGm && (
+        <div
+          role="tablist"
+          aria-label="화면 구역"
+          className="flex gap-1.5 lg:hidden"
+        >
+          {TABS.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={`flex-1 rounded-full border px-3 py-1.5 text-sm ${tab === id ? "bg-primary text-primary-foreground border-transparent" : ""}`}
+            >
+              {label}
+            </button>
           ))}
-        </section>
+        </div>
       )}
 
-      {room.voiceLink && (
-        <section className="bg-card flex flex-wrap items-center gap-3 rounded-xl border p-4">
-          <h2 className="font-medium">음성 대화</h2>
-          <a
-            href={room.voiceLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary text-sm break-all underline"
-          >
-            {room.voiceLink}
-          </a>
-        </section>
-      )}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
+        <div
+          className={`${overview.isGm || tab === "common" ? "flex" : "hidden"} flex-col gap-6 lg:flex`}
+        >
+          {unlocked.length > 0 && (
+            <section className="bg-card flex flex-col gap-3 rounded-xl border p-4">
+              <h2 className="font-medium">공개된 정보</h2>
+              {unlocked.map((r) => (
+                <div key={r.id} className="flex flex-col gap-0.5">
+                  <span className="text-muted-foreground text-xs">
+                    {r.name}
+                  </span>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {r.unlockContent}
+                  </p>
+                </div>
+              ))}
+            </section>
+          )}
 
-      <CluesPanel ctx={ctx} />
-      {room.playMode === "chat" && <ChatPanel ctx={ctx} />}
-      {overview.isGm && <GmGuide ctx={ctx} />}
+          {room.voiceLink && (
+            <section className="bg-card flex flex-wrap items-center gap-3 rounded-xl border p-4">
+              <h2 className="font-medium">음성 대화</h2>
+              <a
+                href={room.voiceLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary text-sm break-all underline"
+              >
+                {room.voiceLink}
+              </a>
+            </section>
+          )}
 
-      <section className="bg-card flex flex-col gap-2 rounded-xl border p-4">
-        <h2 className="font-medium">사건 개요</h2>
-        <dl className="flex flex-col gap-2 text-sm">
-          <Info label="피해자" value={scenario.victim} />
-          <Info
-            label="사건 시각 / 장소"
-            value={[scenario.incidentTime, scenario.incidentPlace]
-              .filter(Boolean)
-              .join(" / ")}
-          />
-          <Info label="오프닝" value={scenario.openingText} />
-        </dl>
-      </section>
+          <CluesPanel ctx={ctx} notes={overview.isGm ? undefined : notes} />
+          {room.playMode === "chat" && (
+            <ChatPanel ctx={ctx} notes={overview.isGm ? undefined : notes} />
+          )}
+          {overview.isGm && <GmGuide ctx={ctx} />}
+
+          <section className="bg-card flex flex-col gap-2 rounded-xl border p-4">
+            <h2 className="font-medium">사건 개요</h2>
+            <dl className="flex flex-col gap-2 text-sm">
+              <Info label="피해자" value={scenario.victim} />
+              <Info
+                label="사건 시각 / 장소"
+                value={[scenario.incidentTime, scenario.incidentPlace]
+                  .filter(Boolean)
+                  .join(" / ")}
+              />
+              <Info label="오프닝" value={scenario.openingText} />
+            </dl>
+          </section>
+        </div>
+
+        {!overview.isGm && (
+          <div className="flex flex-col gap-6">
+            <div
+              className={`${tab === "mine" ? "flex" : "hidden"} flex-col gap-6 lg:flex`}
+            >
+              <CharacterCardPanel ctx={ctx} />
+              <MissionsPanel ctx={ctx} />
+            </div>
+            <div className={`${tab === "notes" ? "block" : "hidden"} lg:block`}>
+              <NotesPanel ctx={ctx} notes={notes} />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

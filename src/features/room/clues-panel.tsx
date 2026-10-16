@@ -5,12 +5,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LABELS } from "@/lib/schemas/scenario";
 
+import { TagButtons } from "./notes-panel";
 import type { RoomContext } from "./room-client";
 import { drawCard, fetchClues } from "./state";
+import type { NotesApi } from "./use-notes";
 import { useRemote } from "./use-remote";
 
 /** 증거 보관함 + 카드 뽑기. 뽑지 않은 카드의 내용은 서버가 아무에게도 주지 않는다. */
-export function CluesPanel({ ctx }: { ctx: RoomContext }) {
+export function CluesPanel({
+  ctx,
+  notes,
+}: {
+  ctx: RoomContext;
+  notes?: NotesApi;
+}) {
   const { overview } = ctx;
   const [reload, setReload] = useState(0);
   const [drawing, setDrawing] = useState(false);
@@ -89,6 +97,13 @@ export function CluesPanel({ ctx }: { ctx: RoomContext }) {
               </div>
               {c.body && (
                 <p className="text-sm whitespace-pre-wrap">{c.body}</p>
+              )}
+              {notes && (
+                <TagButtons
+                  notes={notes}
+                  tagKey={`clue:${c.id}`}
+                  label={c.title || "제목 없음"}
+                />
               )}
               {(c.isPublic || overview.isGm) && c.holderName && (
                 <p className="text-muted-foreground text-xs">
