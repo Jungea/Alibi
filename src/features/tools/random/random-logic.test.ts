@@ -36,6 +36,25 @@ describe("assignCharacters", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("참가자 이름이 겹치면 오류를 반환한다", () => {
+    const r = assignCharacters(["민수", "지아", "민수", "하늘"], characters);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toContain("민수");
+  });
+
+  it("인물 이름이 겹치면 오류를 반환한다", () => {
+    const r = assignCharacters(players, ["탐정", "집사", "탐정", "화가"]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toContain("탐정");
+  });
+
+  it("A, B로 구분한 동명이인은 배정된다", () => {
+    const r = assignCharacters(["민수A", "민수B", "하늘", "도윤"], characters);
+    expect(r.ok).toBe(true);
+  });
+
   it("참가자가 없으면 오류를 반환한다", () => {
     expect(assignCharacters([], []).ok).toBe(false);
   });
@@ -80,6 +99,20 @@ describe("drawCard", () => {
 describe("speakingOrder", () => {
   it("모든 이름이 한 번씩 포함된다", () => {
     const names = ["가", "나", "다", "라"];
-    expect(speakingOrder(names).sort()).toEqual([...names].sort());
+    const r = speakingOrder(names);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect([...r.order].sort()).toEqual([...names].sort());
+  });
+
+  it("이름이 겹치면 오류를 반환한다", () => {
+    const r = speakingOrder(["가", "나", "가"]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toContain("가");
+  });
+
+  it("이름이 없으면 오류를 반환한다", () => {
+    expect(speakingOrder([]).ok).toBe(false);
   });
 });

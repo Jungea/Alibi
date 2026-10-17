@@ -98,6 +98,10 @@ function AssignPanel() {
           />
         </div>
       </div>
+      <p className="text-muted-foreground text-xs">
+        ※ 이름이 같은 경우 &quot;민수A&quot;, &quot;민수B&quot;처럼 구분해서
+        입력해 주세요.
+      </p>
       {error && (
         <p role="alert" className="text-destructive text-sm">
           {error}
@@ -307,13 +311,14 @@ function OrderPanel() {
   const names = parseList(text);
 
   const run = () => {
-    if (names.length === 0) {
-      setError("이름을 한 명 이상 입력해 주세요.");
+    const r = speakingOrder(names);
+    if (!r.ok) {
+      setError(r.error);
       setOrder(null);
       return;
     }
     setError(null);
-    setOrder(speakingOrder(names));
+    setOrder(r.order);
   };
 
   return (
@@ -328,6 +333,10 @@ function OrderPanel() {
           onChange={(e) => setText(e.target.value)}
         />
       </div>
+      <p className="text-muted-foreground text-xs">
+        ※ 이름이 같은 경우 &quot;민수A&quot;, &quot;민수B&quot;처럼 구분해서
+        입력해 주세요.
+      </p>
       {error && (
         <p role="alert" className="text-destructive text-sm">
           {error}
