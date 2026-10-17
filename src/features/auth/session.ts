@@ -17,5 +17,9 @@ export async function requireUser() {
     supabase,
     userId: claims.sub,
     email: typeof claims.email === "string" ? claims.email : "",
+    nickname:
+      typeof claims.user_metadata?.nickname === "string"
+        ? claims.user_metadata.nickname
+        : "",
   };
 }

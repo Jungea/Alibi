@@ -24,11 +24,11 @@ export default function BuilderLayout({ children }: LayoutProps<"/builder">) {
 
 async function UserMenu() {
   if (!getSupabaseEnv()) return null;
-  const { email } = await requireUser();
+  const { email, nickname } = await requireUser();
   return (
     <form action={signOutAction} className="flex items-center gap-3">
       <span className="text-muted-foreground max-w-40 truncate text-sm">
-        {email}
+        {nickname || email}
       </span>
       <Button type="submit" variant="outline" size="sm">
         로그아웃

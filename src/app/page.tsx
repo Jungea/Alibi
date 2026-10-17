@@ -4,7 +4,17 @@ import { buttonVariants } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 text-center">
+    <main className="relative flex flex-1 flex-col items-center justify-center gap-6 px-4 text-center">
+      <Link
+        href="/login"
+        className={buttonVariants({
+          variant: "ghost",
+          size: "sm",
+          className: "absolute top-4 right-4",
+        })}
+      >
+        로그인
+      </Link>
       <div className="flex flex-col gap-3">
         <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
           알리바이

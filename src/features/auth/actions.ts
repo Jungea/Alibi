@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { validateNickname } from "@/lib/game/room-state";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -63,6 +64,10 @@ export async function signUpAction(
   const parsed = parseCredentials(formData);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
+  const nickname = String(formData.get("nickname") ?? "").trim();
+  const nickError = validateNickname(nickname);
+  if (nickError) return { error: nickError };
+
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto =
@@ -73,7 +78,10 @@ export async function signUpAction(
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     ...parsed.data,
-    options: { emailRedirectTo: `${origin}/auth/callback?next=/builder` },
+    options: {
+      data: { nickname },
+      emailRedirectTo: `${origin}/auth/callback?next=/builder`,
+    },
   });
   if (error)
     return {

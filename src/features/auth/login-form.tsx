@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NICKNAME_MAX } from "@/lib/game/room-state";
 
 import { signInAction, signUpAction, type AuthState } from "./actions";
 
@@ -48,6 +49,15 @@ export function LoginForm({ next }: { next: string }) {
         />
         <p className="text-muted-foreground text-xs">8자 이상</p>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="nickname">닉네임 (회원가입할 때만)</Label>
+        <Input
+          id="nickname"
+          name="nickname"
+          autoComplete="nickname"
+          maxLength={NICKNAME_MAX}
+        />
+      </div>
       {state.error && (
         <p role="alert" className="text-destructive text-sm">
           {state.error}
@@ -58,19 +68,22 @@ export function LoginForm({ next }: { next: string }) {
           {state.message}
         </p>
       )}
-      <div className="flex gap-2">
-        <Button type="submit" formAction={signIn} disabled={pending}>
-          로그인
-        </Button>
+      <Button type="submit" size="lg" formAction={signIn} disabled={pending}>
+        로그인
+      </Button>
+      <p className="text-muted-foreground flex items-center justify-center gap-1 text-sm">
+        계정이 없으신가요?
         <Button
           type="submit"
-          variant="outline"
+          variant="link"
+          size="sm"
+          className="px-1"
           formAction={signUp}
           disabled={pending}
         >
           회원가입
         </Button>
-      </div>
+      </p>
     </form>
   );
 }
