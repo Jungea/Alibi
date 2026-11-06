@@ -47,7 +47,7 @@ test("GM 1명과 참가자 3명이 한 판을 끝까지 진행한다", async ({ 
   const gm = await gmContext.newPage();
   gm.on("dialog", (d) => void d.accept());
 
-  await gm.goto("/login");
+  await gm.goto("/signup");
   await gm.getByLabel("이메일").fill(`e2e+${Date.now()}@example.com`);
   await gm.getByLabel("비밀번호").fill(PASSWORD);
   await gm.getByRole("button", { name: "회원가입" }).click();

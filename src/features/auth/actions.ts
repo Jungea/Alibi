@@ -21,6 +21,10 @@ const credentialsSchema = z.object({
     .max(72, "비밀번호는 72자 이하여야 합니다."),
 });
 
+const signupSchema = credentialsSchema.extend({
+  passwordConfirm: z.string(),
+});
+
 /** 로그인 후 돌아갈 내부 경로만 허용한다 (오픈 리다이렉트 방지). */
 function safeNext(value: FormDataEntryValue | null): string {
   if (
@@ -61,8 +65,14 @@ export async function signUpAction(
 ): Promise<AuthState> {
   if (!getSupabaseEnv())
     return { error: "서버에 Supabase 설정이 되어 있지 않습니다." };
-  const parsed = parseCredentials(formData);
+  const parsed = signupSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+    passwordConfirm: formData.get("passwordConfirm"),
+  });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (parsed.data.password !== parsed.data.passwordConfirm)
+    return { error: "비밀번호가 일치하지 않습니다." };
 
   const nickname = String(formData.get("nickname") ?? "").trim();
   const nickError = validateNickname(nickname);
@@ -77,7 +87,8 @@ export async function signUpAction(
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
-    ...parsed.data,
+    email: parsed.data.email,
+    password: parsed.data.password,
     options: {
       data: { nickname },
       emailRedirectTo: `${origin}/auth/callback?next=/builder`,

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
+import { SiteHeader } from "@/components/site-header";
 import { LoginForm } from "@/features/auth/login-form";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
@@ -9,21 +9,17 @@ export const metadata: Metadata = { title: "로그인 | 알리바이" };
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-10">
-      <div className="flex flex-col gap-1">
-        <Link href="/" className="text-muted-foreground text-sm">
-          ← 알리바이
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">로그인</h1>
-        <p className="text-muted-foreground text-sm">
-          시나리오를 만들려면 로그인이 필요합니다. 도움도구는 로그인 없이 쓸 수
-          있습니다.
-        </p>
-      </div>
-      <Suspense>
-        <LoginBody searchParams={searchParams} />
-      </Suspense>
-    </main>
+    <>
+      <SiteHeader />
+      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4 py-10">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">로그인</h1>
+        </div>
+        <Suspense>
+          <LoginBody searchParams={searchParams} />
+        </Suspense>
+      </main>
+    </>
   );
 }
 
