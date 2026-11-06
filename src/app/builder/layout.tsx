@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { signOutAction } from "@/features/auth/actions";
@@ -23,6 +24,8 @@ export default function BuilderLayout({ children }: LayoutProps<"/builder">) {
 }
 
 async function UserMenu() {
+  // 인증 토큰 확인은 요청마다 달라질 수 있으므로 정적 프리렌더에서 제외한다.
+  await connection();
   if (!getSupabaseEnv()) return null;
   const { email, nickname } = await requireUser();
   return (

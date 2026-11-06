@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { z } from "zod";
 
@@ -25,6 +26,7 @@ export default function RoomPage({ params }: PageProps<"/room/[id]">) {
 async function RoomContent({
   params,
 }: Pick<PageProps<"/room/[id]">, "params">) {
+  await connection();
   if (!getSupabaseEnv()) redirect("/join");
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
