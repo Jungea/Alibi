@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
@@ -18,11 +19,15 @@ export function SiteHeader({ actions }: { actions?: ReactNode }) {
 
   return (
     <header className="border-primary/20 relative mx-auto flex w-full max-w-6xl items-center justify-between border-b px-5 py-4 sm:px-8">
-      <Link
-        href="/"
-        className="text-primary font-serif text-2xl font-semibold tracking-[-0.08em] sm:text-3xl"
-      >
-        알리바이
+      <Link href="/" className="inline-flex items-center">
+        <Image
+          src="/alibi-logo-libi.png"
+          alt="A 로고 LIBI"
+          width={2172}
+          height={724}
+          priority
+          className="h-9 w-auto sm:h-10"
+        />
       </Link>
       <nav className="text-foreground/75 hidden items-center gap-7 text-sm font-medium md:flex">
         <Link
