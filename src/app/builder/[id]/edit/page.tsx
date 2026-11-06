@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { z } from "zod";
 
@@ -28,6 +29,7 @@ async function EditContent({
   params,
   searchParams,
 }: Pick<PageProps<"/builder/[id]/edit">, "params" | "searchParams">) {
+  await connection();
   if (!getSupabaseEnv()) return <SetupNotice />;
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();

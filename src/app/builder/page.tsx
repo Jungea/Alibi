@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Copy, DoorOpen, Download, Pencil, Plus, Trash2 } from "lucide-react";
 
@@ -71,6 +72,7 @@ async function RoomNotice({
 
 async function ActiveRooms() {
   if (!getSupabaseEnv()) return null;
+  await connection();
   const { supabase, userId } = await requireUser();
   const rooms = await listActiveRooms(supabase, userId);
   if (rooms.length === 0) return null;
@@ -101,6 +103,7 @@ async function ActiveRooms() {
 
 async function ScenarioList() {
   if (!getSupabaseEnv()) return <SetupNotice />;
+  await connection();
   const { supabase } = await requireUser();
   const scenarios = await listScenarios(supabase);
 

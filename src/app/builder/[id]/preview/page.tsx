@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { z } from "zod";
 
@@ -27,6 +28,7 @@ export default function PreviewPage({
 async function PreviewContent({
   params,
 }: Pick<PageProps<"/builder/[id]/preview">, "params">) {
+  await connection();
   if (!getSupabaseEnv()) return <SetupNotice />;
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
