@@ -204,12 +204,27 @@ e2e/                   Playwright
 **3. 배포 환경 연결**
 
 - [ ] `alibi-prod`에도 `npx supabase link`(prod ref) → `npx supabase db push` 실행
-- [ ] Vercel 프로젝트 → Settings → Environment Variables 에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`를 `alibi-prod` 값으로 등록 (Production), 미리보기 배포에는 `alibi-dev` 값 (Preview)
+- [ ] 아래 PowerShell 명령으로 헬스체크 토큰 생성 (출력값을 비밀번호처럼 보관)
+  ```powershell
+  $b = New-Object byte[] 32
+  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+  $rng.GetBytes($b)
+  [BitConverter]::ToString($b).Replace('-', '').ToLowerInvariant()
+  ```
+- [ ] Vercel 프로젝트 → Settings → Environment Variables 에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `HEALTH_CHECK_TOKEN`을 등록 (Production), 미리보기 배포에는 개발용 값을 등록
 - [ ] `alibi-prod` → Authentication → URL Configuration: Site URL에 Vercel 주소, Redirect URLs에 `https://<Vercel 주소>/**` 추가
 - [ ] 재배포 후 배포 주소에서 가입·시나리오 생성 확인
 
-**4. (나중에) 구글 로그인**
+**4. Supabase 헬스체크 크론**
+
+- [ ] [cron-job.org](https://console.cron-job.org/jobs)에서 8시간마다 실행하는 작업 생성
+- [ ] URL은 `https://<Vercel 주소>/api/health`, 요청 방식은 `GET`으로 설정
+- [ ] 요청 헤더에 `X-Health-Token: <HEALTH_CHECK_TOKEN 값>` 추가
+- [ ] 저장 후 테스트 실행이 HTTP `200`, 응답 본문 `{"status":"ok"}`인지 확인
+- [ ] 실패 및 실패 후 복구 알림 활성화
+
+**5. (나중에) 구글 로그인**
 
 - [ ] Google Cloud Console에서 OAuth 클라이언트 생성 후 Supabase → Authentication → Providers → Google에 클라이언트 ID/시크릿 입력. 앱의 구글 로그인 버튼은 이후 릴리즈에서 추가합니다.
 
-Supabase 무료 플랜은 1주일 동안 사용하지 않으면 프로젝트가 일시정지됩니다. 모임 전날 접속해 확인하세요.
+Supabase 무료 플랜은 DB 활동이 부족하면 프로젝트가 일시정지될 수 있습니다. `/api/health`는 매번 실제 DB RPC를 호출하지만, 무료 프로젝트의 지속 실행을 보장하는 방법은 유료 플랜뿐입니다.
